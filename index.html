@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NIOSH Lifting Equation Simulator</title>
+<style>
+  :root{--ink:#1F2A30;--ink2:#3A4A52;--muted:#7A8890;--bg:#FFFFFF;--panel:#F1F3F4;--line:#D5DADD;
+        --h:#D85A30;--v:#2F7FC1;--d:#1D9E75;--a:#E8A317;--ok:#1D9E75;--warn:#D85A30;--bad:#A32D2D}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Calibri,"Segoe UI",Arial,sans-serif;color:var(--ink);background:var(--bg)}
+  .wrap{max-width:1180px;margin:0 auto;padding:16px 20px}
+  h1{font-family:Cambria,Georgia,serif;font-size:26px;margin:0 0 2px}
+  .sub{color:var(--muted);font-size:14px;margin-bottom:12px}
+  .grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:16px}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border-radius:10px;padding:14px 16px}
+  .row{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:14px}
+  .row label{min-width:150px;color:var(--ink2)}
+  .row input[type=range]{flex:1;accent-color:var(--ink2)}
+  .row .val{min-width:112px;text-align:right;font-weight:bold}
+  select{font:inherit;font-size:14px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:#fff}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .mults{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:12px}
+  .m{background:#fff;border-radius:8px;padding:8px;text-align:center;border:1px solid var(--line)}
+  .m .k{font-size:12px;color:var(--muted)} .m .n{font-size:18px;font-weight:bold}
+  .m .bar{height:5px;background:var(--line);border-radius:3px;margin-top:5px;overflow:hidden}
+  .m .bar i{display:block;height:100%;background:var(--ink2)}
+  .m.low{border-color:var(--h)} .m.low .bar i{background:var(--h)}
+  .res{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+  .big{border-radius:10px;padding:12px 14px;background:var(--ink);color:#fff}
+  .big .k{font-size:13px;opacity:.8} .big .n{font-size:30px;font-weight:bold;font-family:Cambria,Georgia,serif}
+  .verdict{font-size:14px;font-weight:bold;margin-top:2px}
+  .eq{font-family:Consolas,monospace;font-size:13px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:10px;color:var(--ink2);word-break:break-word}
+  .warnbox{display:none;margin-top:10px;padding:8px 10px;border-radius:8px;background:#FCEBEB;color:var(--bad);font-size:13px}
+  .btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  button{font:inherit;font-size:13px;padding:5px 10px;border:1px solid var(--ink2);background:#fff;color:var(--ink);border-radius:6px;cursor:pointer}
+  button:hover{background:var(--panel)}
+  .note{font-size:12px;color:var(--muted);margin-top:10px}
+  table.xt{width:100%;border-collapse:collapse;font-size:13.5px;background:#fff;border-radius:8px;overflow:hidden}
+  .xt th{background:var(--ink);color:#fff;text-align:left;padding:7px 9px;font-weight:bold}
+  .xt td{padding:7px 9px;border-top:1px solid var(--line);vertical-align:top}
+  .xt tr:nth-child(even) td{background:#F8F9FA}
+  .xt td.sym{font-weight:bold;font-size:15px;white-space:nowrap}
+  .xt td.num{font-weight:bold;white-space:nowrap}
+  .xt tr.out td{background:#F1F3F4;font-weight:bold}
+  .xt .lowm{color:var(--h)}
+  svg text{font-family:Calibri,"Segoe UI",Arial,sans-serif}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>NIOSH Revised Lifting Equation simulator</h1>
+  <div class="sub">RWL = 23 kg × HM × VM × DM × AM × FM × CM &nbsp;|&nbsp; LI = Load ÷ RWL &nbsp;|&nbsp; Move the sliders to see how each change affects risk</div>
+
+  <div class="grid">
+    <div class="panel">
+      <svg id="scene" viewBox="0 0 700 430" width="100%" role="img" aria-label="Side view of the lifting task">
+        <defs>
+          <marker id="ah" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 1L9 5L0 9z" fill="context-stroke"/></marker>
+        </defs>
+        <rect x="20" y="380" width="490" height="10" fill="#E3E6E8"/><line x1="20" y1="380" x2="510" y2="380" stroke="#7A8890" stroke-width="1.5"/>
+        <g id="furniture"></g>
+
+        
+        <rect id="dest" width="56" height="40" fill="none" stroke="#1D9E75" stroke-width="2" stroke-dasharray="6 4" rx="3"/>
+        <rect id="box" width="56" height="40" fill="#E8A317" stroke="#1F2A30" stroke-width="1.5" rx="3"/>
+        <g id="worker"></g>
+        <circle cx="150" cy="380" r="5" fill="#D85A30"/>
+        <line id="hl" stroke="#D85A30" stroke-width="2" marker-start="url(#ah)" marker-end="url(#ah)"/>
+        <text id="ht" font-size="14" font-weight="bold" fill="#D85A30" text-anchor="middle"></text>
+        <line id="vl" stroke="#2F7FC1" stroke-width="2" marker-start="url(#ah)" marker-end="url(#ah)"/>
+        <text id="vt" font-size="14" font-weight="bold" fill="#2F7FC1"></text>
+        <line id="dl" stroke="#1D9E75" stroke-width="2" marker-start="url(#ah)" marker-end="url(#ah)"/>
+        <text id="dt" font-size="14" font-weight="bold" fill="#1D9E75"></text>
+        <text id="at" x="20" y="24" text-anchor="start" font-size="14" font-weight="bold" fill="#B07A0F"></text>
+        <g id="callouts"></g>
+      </svg>
+      <div class="res">
+        <div class="big"><div class="k">Recommended Weight Limit</div><div class="n" id="rwl">–</div></div>
+        <div class="big"><div class="k">Lifting Index</div><div class="n" id="li">–</div><div class="verdict" id="verdict"></div></div>
+      </div>
+      <div class="eq" id="eq"></div>
+      <div class="warnbox" id="warn"></div>
+    </div>
+
+    <div class="panel">
+      <div class="row"><label>Load weight</label><input type="range" id="L" min="1" max="35" step="0.5" value="15"><span class="val" id="Lv"></span></div>
+      <div class="row"><label><span class="dot" style="background:var(--h)"></span>H horizontal distance</label><input type="range" id="H" min="15" max="70" step="1" value="40"><span class="val" id="Hv"></span></div>
+      <div class="row"><label><span class="dot" style="background:var(--v)"></span>V origin height</label><input type="range" id="V" min="0" max="180" step="5" value="30"><span class="val" id="Vv"></span></div>
+      <div class="row"><label><span class="dot" style="background:var(--d)"></span>Destination height</label><input type="range" id="Dest" min="0" max="180" step="5" value="110"><span class="val" id="Destv"></span></div>
+      <div class="row"><label><span class="dot" style="background:var(--a)"></span>A twist angle</label><input type="range" id="A" min="0" max="150" step="5" value="30"><span class="val" id="Av"></span></div>
+      <div class="row"><label>Frequency (lifts/min)</label>
+        <select id="F">
+          <option>0.2</option><option>0.5</option><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option><option>13</option><option>14</option><option>15</option><option value="16">&gt;15</option>
+        </select></div>
+      <div class="row"><label>Work duration</label>
+        <select id="Dur"><option value="0" selected>Short: ≤ 1 hour</option><option value="1">Moderate: 1–2 hours</option><option value="2">Long: 2–8 hours</option></select></div>
+      <div class="row"><label>Coupling</label>
+        <select id="C"><option value="good">Good (handles)</option><option value="fair" selected>Fair</option><option value="poor">Poor (no grip)</option></select></div>
+
+      <div class="mults" id="mults"></div>
+
+      <div class="btns">
+        <button data-p='{"L":15,"H":40,"V":30,"Dest":110,"A":30,"F":"2","Dur":"0","C":"fair"}'>Baseline (LI 1.76)</button>
+        <button data-p='{"H":25}'>Move load closer</button>
+        <button data-p='{"V":75}'>Raise origin to 75 cm</button>
+        <button data-p='{"A":0}'>Remove twist</button>
+        <button data-p='{"C":"good"}'>Add handles</button>
+        <button data-p='{"F":"6"}'>Speed up to 6/min</button>
+      </div>
+      <div class="note">Metric RNLE (NIOSH Pub. 94-110). Limits: H 25–63 cm, V 0–175 cm, D 25–175 cm, A 0–135°, F ≤ 15/min. Values outside a limit make that multiplier 0. H or D below 25 cm count as 25 cm. Lowest multiplier is outlined: fix it first.</div>
+    </div>
+  </div>
+  <div class="panel" style="margin-top:16px">
+    <div style="font-family:Cambria,Georgia,serif;font-size:19px;font-weight:bold;margin-bottom:8px">What each value means, and where you measure it</div>
+    <table class="xt">
+      <thead><tr><th>Symbol</th><th>Name</th><th>What it means</th><th>How to measure it</th><th>Current value</th><th>Multiplier</th><th>Ideal value</th></tr></thead>
+      <tbody id="xtbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+var FM_ROWS = {"0.2":[1,1,.95,.95,.85,.85],"0.5":[.97,.97,.92,.92,.81,.81],"1":[.94,.94,.88,.88,.75,.75],"2":[.91,.91,.84,.84,.65,.65],"3":[.88,.88,.79,.79,.55,.55],"4":[.84,.84,.72,.72,.45,.45],"5":[.80,.80,.60,.60,.35,.35],"6":[.75,.75,.50,.50,.27,.27],"7":[.70,.70,.42,.42,.22,.22],"8":[.60,.60,.35,.35,.18,.18],"9":[.52,.52,.30,.30,0,.15],"10":[.45,.45,.26,.26,0,.13],"11":[.41,.41,0,.23,0,0],"12":[.37,.37,0,.21,0,0],"13":[0,.34,0,0,0,0],"14":[0,.31,0,0,0,0],"15":[0,.28,0,0,0,0],"16":[0,0,0,0,0,0]};
+function $(id){return document.getElementById(id);}
+function set(el,attrs){for(var k in attrs)el.setAttribute(k,attrs[k]);}
+
+function ik(a,b,l1,l2,pick){
+  var dx=b[0]-a[0],dy=b[1]-a[1],d=Math.hypot(dx,dy),dd=Math.min(d,l1+l2-0.01),base=Math.atan2(dy,dx);
+  var al=Math.acos(Math.max(-1,Math.min(1,(l1*l1+dd*dd-l2*l2)/(2*l1*dd||1))));
+  var j1=[a[0]+l1*Math.cos(base+al),a[1]+l1*Math.sin(base+al)],j2=[a[0]+l1*Math.cos(base-al),a[1]+l1*Math.sin(base-al)];
+  return pick(j1,j2);
+}
+function drawWorker(fx,fy,tx,ty){
+  var SH=85,TH=85,TO=99,UA=63,FA=70,reach=UA+FA-3,best=null;
+  for(var drop=0;drop<=90;drop+=5){for(var lean=0;lean<=75;lean+=3){
+    var hip=[fx-8-drop*0.45,fy-SH-TH+drop+drop*0.15];
+    var r=lean*Math.PI/180, sh=[hip[0]+TO*Math.sin(r),hip[1]-TO*Math.cos(r)];
+    var d=Math.hypot(tx-sh[0],ty-sh[1]), cost=lean*1.0+drop*1.1+(d>reach?(d-reach)*20:0);
+    if(!best||cost<best.cost)best={cost:cost,hip:hip,sh:sh,lean:lean};
+  }}
+  var hip=best.hip,sh=best.sh,lean=best.lean,r=lean*Math.PI/180,ux=Math.sin(r),uy=-Math.cos(r);
+  var hand=[tx,ty],dh=Math.hypot(tx-sh[0],ty-sh[1]);
+  if(dh>UA+FA-1){hand=[sh[0]+(tx-sh[0])/dh*(UA+FA-1),sh[1]+(ty-sh[1])/dh*(UA+FA-1)];}
+  var front=function(j1,j2){return j1[0]>j2[0]?j1:j2;};
+  var low=function(j1,j2){return j1[1]>j2[1]?j1:j2;};
+  var ankF=[fx+8,fy-8],ankB=[fx-8,fy-8];
+  var kF=ik(ankF,hip,SH,TH,front),kB=ik(ankB,[hip[0]-4,hip[1]],SH,TH,front);
+  var el=ik(sh,hand,UA,FA,low);
+  var neck=[sh[0]+ux*14,sh[1]+uy*14],head=[sh[0]+ux*34,sh[1]+uy*34];
+  var mid=[hip[0]+ux*TO*0.55,hip[1]+uy*TO*0.55],px=-uy,py=ux;
+  function L(a,b,c,w){return '<line x1="'+a[0].toFixed(1)+'" y1="'+a[1].toFixed(1)+'" x2="'+b[0].toFixed(1)+'" y2="'+b[1].toFixed(1)+'" stroke="'+c+'" stroke-width="'+w+'" stroke-linecap="round"/>';}
+  var g='';
+  // back leg (darker)
+  g+=L(ankB,kB,'#1E2A40',19)+L(kB,[hip[0]-4,hip[1]],'#1E2A40',21);
+  g+='<rect x="'+(ankB[0]-12)+'" y="'+(fy-14)+'" width="34" height="14" rx="5" fill="#2E1F12"/>';
+  // torso: shirt under vest
+  g+=L(hip,sh,'#2F5D8A',34);
+  g+=L([hip[0]+ux*6,hip[1]+uy*6],[sh[0]-ux*4,sh[1]-uy*4],'#F28C28',30);
+  // reflective stripes on vest
+  [0.35,0.68].forEach(function(t){var c=[hip[0]+ux*TO*t,hip[1]+uy*TO*t];g+=L([c[0]-px*14,c[1]-py*14],[c[0]+px*14,c[1]+py*14],'#E6EAEC',5);});
+  // belt
+  var bt=[hip[0]+ux*4,hip[1]+uy*4];g+=L([bt[0]-px*16,bt[1]-py*16],[bt[0]+px*16,bt[1]+py*16],'#3A2A1A',6);
+  // front leg
+  g+=L(ankF,kF,'#2B3A55',19)+L(kF,hip,'#2B3A55',21);
+  g+='<rect x="'+(ankF[0]-12)+'" y="'+(fy-14)+'" width="36" height="14" rx="5" fill="#4A3420"/>';
+  g+='<rect x="'+(ankF[0]+8)+'" y="'+(fy-14)+'" width="16" height="9" rx="3" fill="#7A8890"/>';
+  // neck and head
+  g+=L(sh,neck,'#C68A62',12);
+  g+='<circle cx="'+head[0].toFixed(1)+'" cy="'+head[1].toFixed(1)+'" r="15" fill="#D9A07A"/>';
+  // hard hat, rotated with torso lean
+  g+='<g transform="translate('+head[0].toFixed(1)+','+head[1].toFixed(1)+') rotate('+lean+')">'+
+     '<path d="M-17,-3 A17,16 0 0 1 17,-3 Z" fill="#F2C230" stroke="#B8901A" stroke-width="1"/>'+
+     '<line x1="-19" y1="-3" x2="25" y2="-3" stroke="#E0AE1C" stroke-width="4" stroke-linecap="round"/>'+
+     '<line x1="0" y1="-18" x2="0" y2="-4" stroke="#D8A81E" stroke-width="3"/>'+
+     '<circle cx="9" cy="3" r="1.8" fill="#1F2A30"/></g>';
+  // arm (sleeve + forearm) and glove
+  g+=L(sh,el,'#2F5D8A',14)+L(el,hand,'#D9A07A',11);
+  g+='<circle cx="'+hand[0].toFixed(1)+'" cy="'+hand[1].toFixed(1)+'" r="8" fill="#F2C230" stroke="#B8901A" stroke-width="1"/>';
+  $('worker').innerHTML=g;
+  return hand;
+}
+function calc(){
+  var L=+$('L').value,H=+$('H').value,V=+$('V').value,Dest=+$('Dest').value,A=+$('A').value,F=$('F').value,dur=+$('Dur').value,c=$('C').value;
+  var D=Math.abs(Dest-V), warns=[];
+  var HM = H>63 ? 0 : 25/Math.max(H,25);
+  var VM = V>175 ? 0 : 1-0.003*Math.abs(V-75);
+  var DM = D>175 ? 0 : Math.min(1,0.82+4.5/Math.max(D,25));
+  var AM = A>135 ? 0 : 1-0.0032*A;
+  var FM = FM_ROWS[F][dur*2+(V>=75?1:0)];
+  var CM = c==='good'?1:(c==='poor'?0.9:(V<75?0.95:1));
+  if(H>63)warns.push('H > 63 cm: HM = 0 (load is beyond reach).');
+  if(V>175)warns.push('V > 175 cm: VM = 0.');
+  if(Dest>175)warns.push('Destination above 175 cm is outside the equation limits.');
+  if(A>135)warns.push('A > 135°: AM = 0.');
+  if(FM===0)warns.push('This frequency and duration combination gives FM = 0.');
+  if(H<25)warns.push('H < 25 cm: use 25 cm (HM capped at 1.0).');
+  if(D<25)warns.push('D < 25 cm: use 25 cm (DM capped at 1.0).');
+  var RWL=23*HM*VM*DM*AM*FM*CM, LI=RWL>0?L/RWL:Infinity;
+
+  $('Lv').textContent=L+' kg'; $('Hv').textContent=H+' cm'; $('Vv').textContent=V+' cm';
+  $('Destv').textContent=Dest+' cm (D '+D+')'; $('Av').textContent=A+'°';
+
+  var m=[['HM',HM],['VM',VM],['DM',DM],['AM',AM],['FM',FM],['CM',CM]], min=Math.min(HM,VM,DM,AM,FM,CM);
+  $('mults').innerHTML=m.map(function(x){return '<div class="m'+(x[1]===min&&min<1?' low':'')+'"><div class="k">'+x[0]+'</div><div class="n">'+x[1].toFixed(3)+'</div><div class="bar"><i style="width:'+(x[1]*100)+'%"></i></div></div>';}).join('');
+  $('rwl').textContent=RWL.toFixed(2)+' kg';
+  var col,txt;
+  if(!isFinite(LI)){col='#F09595';txt='RWL is 0: task outside the equation limits, so redesign';}
+  else if(LI<=1){col='#5DCAA5';txt='Acceptable for nearly all workers';}
+  else if(LI<=3){col='#F0997B';txt='Increased risk: redesign the task';}
+  else{col='#F09595';txt='High risk for most workers';}
+  $('li').textContent=isFinite(LI)?LI.toFixed(2):'∞'; $('li').style.color=col;
+  $('verdict').textContent=txt; $('verdict').style.color=col;
+  $('eq').textContent='RWL = 23 × '+HM.toFixed(3)+' × '+VM.toFixed(3)+' × '+DM.toFixed(3)+' × '+AM.toFixed(3)+' × '+FM.toFixed(2)+' × '+CM.toFixed(2)+' = '+RWL.toFixed(2)+' kg;  LI = '+L+' ÷ '+RWL.toFixed(2)+' = '+(isFinite(LI)?LI.toFixed(2):'∞');
+  var w=$('warn'); w.style.display=warns.length?'block':'none'; w.innerHTML=warns.join('<br>');
+
+  // drawing: floor y=380, ankle x=110
+  var fx=150, fy=380, sx=1.9, sy=1.9;
+  var hx=fx+H*sx, hy=fy-V*sy, dy=fy-Math.min(Dest,185)*sy;
+  set($('box'),{x:hx-28,y:Math.min(hy-20,fy-41)}); set($('dest'),{x:hx-28,y:dy-20});
+  var hand=drawWorker(fx,fy,hx-12,hy);
+  var boxY=Math.min(hy-20,fy-41), boxBot=boxY+40, destBot=dy+20;
+  // furniture: workbench under the origin box, wall shelf under the destination box
+  var fu='';
+  if(boxBot<fy-6){
+    fu+='<rect x="'+(hx-46)+'" y="'+boxBot+'" width="92" height="7" rx="2" fill="#8A6A4A"/>';
+    fu+='<rect x="'+(hx-40)+'" y="'+(boxBot+7)+'" width="6" height="'+(fy-boxBot-7)+'" fill="#6E5338"/>';
+    fu+='<rect x="'+(hx+34)+'" y="'+(boxBot+7)+'" width="6" height="'+(fy-boxBot-7)+'" fill="#6E5338"/>';
+  }
+  if(Math.abs(destBot-boxBot)>4 && destBot<fy-6){
+    fu+='<rect x="'+(hx-40)+'" y="'+destBot+'" width="80" height="6" rx="2" fill="#5E8C7A"/>';
+    fu+='<path d="M'+(hx+40)+','+(destBot+6)+' L'+(hx+40)+','+(destBot+26)+' L'+(hx+22)+','+(destBot+6)+' Z" fill="#4C7565"/>';
+  }
+  $('furniture').innerHTML=fu;
+  // callouts in the right-hand column with leader lines
+  var col=548, items=[
+    {t:'End location',s:'Destination: where',s2:'the box is put down',x:hx+28,y:dy,c:'#1D9E75',ly:90},
+    {t:'Grip point (hands)',s:'H and V are measured',s2:'to mid-hands',x:hand[0]+8,y:hand[1],c:'#3A4A52',ly:165},
+    {t:'Start location',s:'Origin: where the lift',s2:'begins',x:hx+28,y:boxY+20,c:'#B07A0F',ly:240},
+    {t:'Ankle midpoint',s:'Between the inner',s2:'ankle bones (H = 0)',x:fx+5,y:fy+5,c:'#D85A30',ly:330}
+  ];
+  var co='<line x1="'+(col-8)+'" y1="60" x2="'+(col-8)+'" y2="410" stroke="#D5DADD" stroke-width="1"/>';
+  items.forEach(function(it){
+    var lx=col-8, ly=it.ly+4;
+    co+='<path d="M'+it.x.toFixed(1)+','+it.y.toFixed(1)+' L'+(lx-14)+','+ly+' L'+lx+','+ly+'" fill="none" stroke="'+it.c+'" stroke-width="1" stroke-dasharray="3 3"/>';
+    co+='<circle cx="'+it.x.toFixed(1)+'" cy="'+it.y.toFixed(1)+'" r="3.5" fill="'+it.c+'"/>';
+    co+='<text x="'+col+'" y="'+it.ly+'" font-size="15" font-weight="bold" fill="'+it.c+'">'+it.t+'</text>';
+    co+='<text x="'+col+'" y="'+(it.ly+18)+'" font-size="13" fill="#5F6B72">'+it.s+'</text>';
+    co+='<text x="'+col+'" y="'+(it.ly+34)+'" font-size="13" fill="#5F6B72">'+it.s2+'</text>';
+  });
+  $('callouts').innerHTML=co;
+  // explanation table
+  var durTxt=['≤ 1 hr','1–2 hr','2–8 hr'][dur], fTxt=F==='16'?'> 15':F;
+  var cTxt={good:'Good',fair:'Fair',poor:'Poor'}[c];
+  var rows=[
+    ['L','Load weight','Weight of the object, including the container','Weigh it',L+' kg','–','–'],
+    ['H','Horizontal location','How far out the hands are from the body','Ankle midpoint to grip point, along the floor',H+' cm',HM,'≤ 25 cm'],
+    ['V','Vertical location','Height of the hands at the start location','Floor to grip point at the origin',V+' cm',VM,'75 cm (knuckle height)'],
+    ['D','Vertical travel distance','How far the box moves up or down','|End height − start height|',D+' cm ('+V+' → '+Dest+')',DM,'≤ 25 cm'],
+    ['A','Asymmetry angle','How much the body twists','Angle from straight ahead to the load, seen from above',A+'°',AM,'0°'],
+    ['F','Frequency','How often the lift is repeated','Average lifts per minute over 15 min, with work duration',fTxt+' /min, '+durTxt,FM,'≤ 0.2 /min'],
+    ['C','Coupling','Quality of the hand grip','Handles, cut-outs, or shape of the object',cTxt,CM,'Good (handles)']
+  ];
+  var tb=rows.map(function(r){
+    var mv=(typeof r[5]==='number')?r[5]:null;
+    var mtxt=mv===null?r[5]:mv.toFixed(3);
+    return '<tr><td class="sym">'+r[0]+'</td><td>'+r[1]+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td><td class="num">'+r[4]+'</td><td class="num'+(mv!==null&&mv===min&&min<1?' lowm':'')+'">'+mtxt+'</td><td>'+r[6]+'</td></tr>';
+  }).join('');
+  tb+='<tr class="out"><td class="sym">RWL</td><td colspan="3">Recommended Weight Limit = 23 kg × HM × VM × DM × AM × FM × CM</td><td class="num" colspan="3">'+RWL.toFixed(2)+' kg</td></tr>';
+  tb+='<tr class="out"><td class="sym">LI</td><td colspan="3">Lifting Index = Load ÷ RWL (≤ 1.0 acceptable, > 1.0 increased risk, > 3.0 high risk)</td><td class="num" colspan="3" style="color:'+(isFinite(LI)&&LI<=1?'#1D9E75':'#D85A30')+'">'+(isFinite(LI)?LI.toFixed(2):'∞')+'</td></tr>';
+  $('xtbody').innerHTML=tb;
+  set($('hl'),{x1:fx,y1:fy+18,x2:hx,y2:fy+18}); set($('ht'),{x:(fx+hx)/2,y:fy+36}); $('ht').textContent='H = '+H+' cm';
+  var vx=hx+48;
+  set($('vl'),{x1:vx,y1:fy,x2:vx,y2:hy}); $('vl').style.display=V>3?'':'none';
+  set($('vt'),{x:vx+6,y:Math.min((fy+hy)/2+5,fy-8)}); $('vt').textContent='V = '+V+' cm';
+  var dx=vx+100;
+  set($('dl'),{x1:dx,y1:hy,x2:dx,y2:dy}); $('dl').style.display=D>3?'':'none';
+  set($('dt'),{x:dx+6,y:(hy+dy)/2+5}); $('dt').textContent='D = '+D+' cm';
+  $('at').textContent='Twist A = '+A+'°';
+}
+['L','H','V','Dest','A','F','Dur','C'].forEach(function(id){$(id).addEventListener('input',calc);$(id).addEventListener('change',calc);});
+Array.prototype.forEach.call(document.querySelectorAll('button[data-p]'),function(b){
+  b.addEventListener('click',function(){var p=JSON.parse(b.getAttribute('data-p'));for(var k in p)$(k).value=p[k];calc();});
+});
+calc();
+</script>
+</body>
+</html>
